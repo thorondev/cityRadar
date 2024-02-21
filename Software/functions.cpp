@@ -1,7 +1,8 @@
 #include "functions.h"
+
 #include <Audio.h>
-#include "OpenAudio_ArduinoLibrary.h"
-#include "AudioStream_F32.h"
+#include <OpenAudio_ArduinoLibrary.h>
+#include <AudioStream_F32.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -25,10 +26,11 @@ void setI2SFreq(int freq) {
 
 void printDigits(int digits){
   // utility function for digital clock display: prints preceding colon and leading 0
-  SerialUSB1.print(":");
+  // TODO changed from SerialUSB1
+  SerialUSB.print(":");
   if(digits < 10)
-    SerialUSB1.print('0');
-  SerialUSB1.print(digits);
+    SerialUSB.print('0');
+  SerialUSB.print(digits);
 }
 
 time_t getTeensy3Time()
