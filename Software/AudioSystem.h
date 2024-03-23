@@ -10,6 +10,8 @@ class AudioSystem
   public:
     struct Config
     {
+        const unsigned int fftWidth = 1024;
+
         const uint16_t sample_rate = 12000;             // Hz; sample rate of data acquisition
         const uint8_t audio_input = AUDIO_INPUT_LINEIN; // AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
         const uint8_t linein_level = 15;                // only relevant if AUDIO_INPUT_LINEIN is used
@@ -35,7 +37,9 @@ class AudioSystem
         float max_amplitude_reverse; // highest signal in spectrum reverse direction
 
         uint16_t max_freq_Index; // index of highest signal in spectrum
+        uint16_t max_pedestrian_bin; // convert max_pedestrian_speed to bin
 
+        float pedestrian_amplitude;  // used to detect the presence of a pedestrians
         float detected_speed;         // speed in m/s based on peak frequency
         float detected_speed_reverse; // speed in m/s based on peak frequency reverse direction
 
@@ -45,7 +49,10 @@ class AudioSystem
         uint8_t bins_with_signal; // how many bins have signal over the noise threshold?
         uint8_t bins_with_signal_reverse;
 
-        uint16_t send_max_fft_bin;
+        uint16_t maxBinIndex;
+        uint16_t minBinIndex;
+
+        void process(float* data, uint16_t iq_offset);
     };
 
   public:
@@ -57,11 +64,13 @@ class AudioSystem
     bool hasData() const;
     void updateIQ(Config const& config);
 
+    uint16_t getNumberOfFftBins() const { return numberOfFftBins; }
+
   private:
     uint16_t iq_offset; // offset used for IQ calculation
-
-    uint16_t send_num_fft_bins; // is calculated from send_max_speed
-    uint16_t send_min_fft_bin;
+    uint16_t numberOfFftBins; // is calculated from send_max_speed
+    uint16_t maxBinIndex;
+    uint16_t minBinIndex;
 
     AudioAnalyzeFFT1024_IQ_F32 fft_IQ1024;
     AudioAnalyzePeak_F32 peak1;
@@ -83,8 +92,6 @@ class AudioSystem
     AudioConnection_F32 patchCord7;
 
     float speed_conversion;      // conversion from Hz to m/s
-    uint16_t max_pedestrian_bin; // convert max_pedestrian_speed to bin
-    float pedestrian_amplitude;  // used to detect the presence of a pedestrians
 };
 
 #endif

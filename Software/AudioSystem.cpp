@@ -13,10 +13,6 @@ AudioSystem::AudioSystem()
 
 void AudioSystem::setup(AudioSystem::Config const& config, float maxPedestrianSpeed, float sendMaxSpeed)
 {
-    speed_conversion = (config.sample_rate / 1024.0) / 44.0;    // conversion from Hz to m/s
-    max_pedestrian_bin = maxPedestrianSpeed / speed_conversion; // convert max_pedestrian_speed to bin
-    send_max_fft_bin = (uint16_t)min(512, sendMaxSpeed / speed_conversion);
-
     // Audio connections require memory to work.  For more
     // detailed information, see the MemoryAndCpuUsage example
     AudioMemory_F32(400);
@@ -26,7 +22,6 @@ void AudioSystem::setup(AudioSystem::Config const& config, float maxPedestrianSp
     sgtl5000_1.micGain(config.mic_gain);         // only relevant if AUDIO_INPUT_MIC is used
     sgtl5000_1.lineInLevel(config.linein_level); // only relevant if AUDIO_INPUT_LINEIN is used
     sgtl5000_1.volume(.5);
-    I_gain.setGain(1);
 
     updateIQ(config);
 
@@ -35,32 +30,44 @@ void AudioSystem::setup(AudioSystem::Config const& config, float maxPedestrianSp
     fft_IQ1024.setOutputType(FFT_DBFS); // FFT_RMS or FFT_POWER or FFT_DBFS
     fft_IQ1024.setXAxis(3);
 
+    speed_conversion = 1.0 * (config.sample_rate / config.fftWidth) / 44.0;    // conversion from Hz to m/s
+    max_pedestrian_bin = maxPedestrianSpeed / speed_conversion; // convert max_pedestrian_speed to bin
+    uint16_t rawBinCount = (uint16_t)min(config.fftWidth/2, sendMaxSpeed / speed_conversion);
+
+    // IQ = symetric FFT
     if(config.iq_measurement)
     {
-        iq_offset = 512;
-        send_num_fft_bins = send_max_fft_bin * 2;
-        send_max_fft_bin = send_max_fft_bin + 512;
-        send_min_fft_bin = (1024 - send_max_fft_bin);
+        iq_offset = config.fftWidth/2;     // new middle point
+        numberOfFftBins = rawBinCount * 2; // send both sides; not only one
+        maxBinIndex += iq_offset;
+        minBinIndex = (config.fftWidth - maxBinIndex);
     }
     else
     {
         iq_offset = 0;
-        send_min_fft_bin = 0;
-        send_num_fft_bins = send_max_fft_bin;
+        minBinIndex = 0;
+        numberOfFftBins = rawBinCount;
     }
 }
 
 void AudioSystem::processData(Results& results)
 {
     float* pointer = fft_IQ1024.getData();
+
+    results.maxBinIndex = this->maxBinIndex;
+    results.minBinIndex = this->minBinIndex;
+
+    results.process(pointer, iq_offset);
+}
+
+void AudioSystem::Results::process(float* pointer, uint16_t iq_offset)
+{
     for(int kk = 0; kk < 1024; kk++)
         spectrum[kk] = *(pointer + kk);
 
     int smooth_n = 1000; // number of samples used for smoothing the spectrum
     for(int i = 0; i < 1024; i++)
-    {
         spectrum_smoothed[i] = ((smooth_n - 1) * spectrum_smoothed[i] + spectrum[i]) / smooth_n;
-    }
 
     // WHAT? noise_floor is const!
     noise_floor = spectrum_smoothed;
@@ -75,7 +82,7 @@ void AudioSystem::processData(Results& results)
     bins_with_signal_reverse = 0;
 
     // detect pedestrian
-    for(i = 3 + iq_offset; i < max_pedestrian_bin + iq_offset; i++)
+    for(auto i = 3 + iq_offset; i < max_pedestrian_bin + iq_offset; i++)
     {
         pedestrian_amplitude = pedestrian_amplitude + spectrum[i];
     }
@@ -86,7 +93,7 @@ void AudioSystem::processData(Results& results)
         noise_floor_distance[i] = spectrum[i] - noise_floor[i];
     }
 
-    for(i = (max_pedestrian_bin + 1 + iq_offset); i < send_max_fft_bin; i++)
+    for(i = (max_pedestrian_bin + 1 + iq_offset); i < maxBinIndex; i++)
     {
         mean_amplitude = mean_amplitude + noise_floor_distance[i];
         if(noise_floor_distance[i] > noise_floor_distance_threshold)
@@ -116,10 +123,10 @@ void AudioSystem::processData(Results& results)
 
     mean_amplitude =
         mean_amplitude /
-        (send_max_fft_bin - (max_pedestrian_bin + 1 + iq_offset)); // TODO: is this valid when working with dB values?
+        (maxBinIndex - (max_pedestrian_bin + 1 + iq_offset)); // TODO: is this valid when working with dB values?
     mean_amplitude_reverse =
         mean_amplitude_reverse /
-        (send_max_fft_bin - (max_pedestrian_bin + 1 + iq_offset)); // TODO: is this valid when working with dB values?
+        (maxBinIndex - (max_pedestrian_bin + 1 + iq_offset)); // TODO: is this valid when working with dB values?
 }
 
 bool AudioSystem::hasData() const

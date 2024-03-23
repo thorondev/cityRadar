@@ -38,7 +38,7 @@ time_t getTeensy3Time()
   return Teensy3Clock.get();
 }
 
-void processInputs(AudioSystem::Config& config)
+void processInputs(AudioSystem::Config& config, bool& sendOutput)
 {
   // control input from serial
   if (Serial.available() > 0) {
@@ -52,7 +52,7 @@ void processInputs(AudioSystem::Config& config)
     }
 
     if(input==100){ // d for data
-        send_output=true;
+        sendOutput=true;
     }
 
     if(input==111){ //o
@@ -79,13 +79,14 @@ void processInputs(AudioSystem::Config& config)
 
     if(input==84)
     {
-        unsigned long pctime = Serial.parseInt();
+        unsigned long externalTime = Serial.parseInt();
 
-        // check the integer is a valid time (greater than Jan 1 2013)
-        if( pctime >= DEFAULT_TIME)
+        // check if we got a somewhat recent time (greater than March 20 2024)
+        unsigned long const minimalTime = 1710930219;
+        if( externalTime >= minimalTime)
         {
-            setTime(pctime); // Sync Arduino clock to the time received on the serial port
-            Teensy3Clock.set(pctime); // set Teensy RTC
+            setTime(externalTime);          // Sync Arduino clock to the time received on the serial port
+            Teensy3Clock.set(externalTime); // set Teensy RTC
         }
 
         SerialUSB1.print("Time set to: ");

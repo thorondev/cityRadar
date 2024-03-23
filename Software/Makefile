@@ -5,7 +5,7 @@ DEVICE_IP       ?= 192.168.1.121
 DEVICE_TTY      ?= /dev/ttyHotWireEsp32
 
 BAUDRATE        := 115200
-BOARD           := teensy:avr:teensy41
+BOARD           := teensy:avr:teensy40:usb=serial2
 
 BUILD_DIR_ARD   := build/
 

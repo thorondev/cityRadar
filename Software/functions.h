@@ -9,6 +9,6 @@ void setI2SFreq(int freq);
 void printDigits(int digits);
 time_t getTeensy3Time();
 
-void processInputs(AudioSystem::Config& config);
+void processInputs(AudioSystem::Config& config, bool& sendOutput);
 
 #endif

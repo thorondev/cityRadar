@@ -21,12 +21,10 @@
 // #define SDCARD_SCK_PIN   13  // not actually used
 
 // variables for file stuff
-File data_file;                                // file for raw data
-File csv_file;                                 // file for metrics as csv
-time_t timestamp;                              // time stamp for saved data
-bool send_output = false;                      // send output over serial? (ONCE)
-uint16_t file_version = 1.1;                   // file version of the output
-const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013 // TODO rename
+File data_file;              // file for raw data
+File csv_file;               // file for metrics as csv
+time_t timestamp;            // time stamp for saved data
+uint16_t file_version = 1.1; // file version of the output
 
 AudioSystem audio;
 AudioSystem::Results audioResults; // global to optimize for speed
@@ -71,15 +69,17 @@ void setup()
     {
         if(config.write_raw_data)
         {
+            auto const binCount = audio.getNumberOfFftBins();
+
             data_file = SD.open(file_name_bin, FILE_WRITE);
             data_file.write((byte*)&file_version, 2);
             data_file.write((byte*)&timestamp, 4);
-            data_file.write((byte*)&send_num_fft_bins, 2);
-            data_file.write((byte*)&iq_measurement, 1);
-            data_file.write((byte*)&sample_rate, 2);
+            data_file.write((byte*)&binCount, 2);
+            data_file.write((byte*)&config.audio.iq_measurement, 1);
+            data_file.write((byte*)&config.audio.sample_rate, 2);
             data_file.flush();
         }
-        if(write_csv_table)
+        if(config.write_csv_table)
         {
             csv_file = SD.open(file_name_csv, FILE_WRITE);
             csv_file.println("timestamp, speed, speed_reverse, strength, strength_reverse, "
@@ -87,7 +87,6 @@ void setup()
                              "bins_with_signal_reverse, pedestrian_mean_amplitude");
             csv_file.flush();
         }
-        write_sd = true;
     }
 
     // IOMUXC_SW_PAD_CTL_PAD_GPIO_B0_00 |= IOMUXC_PAD_SPEED(0) | IOMUXC_PAD_DSE(1)
@@ -102,7 +101,9 @@ void setup()
 
 void loop()
 {
-    processInputs(config.audio);
+    bool sendOutput = false; // send output over serial? (ONCE)
+
+    processInputs(config.audio, sendOutput);
     if(config.audio.hasChanges)
     {
         audio.updateIQ(config.audio);
@@ -112,34 +113,26 @@ void loop()
     // generate output
     if(audio.hasData())
     {
-        audioStuff.processData(audioResults);
+        audio.processData(audioResults);
 
         // save data on sd card
-        if(write_sd)
+        if(config.write_sd)
         {
             // elapsed time since start of sensor in milliseconds
             unsigned long time_millis = millis();
-            if(write_raw_data)
+            if(config.write_raw_data)
             {
-                if(write_8bit)
-                {
-                    data_file.write((byte*)&time_millis, 4);
-                    for(i = send_min_fft_bin; i < send_max_fft_bin; i++)
-                    {
-                        data_file.write((uint8_t)-spectrum[i]);
-                    }
-                }
-                else
-                {
-                    data_file.write((byte*)&time_millis, 4);
-                    for(i = send_min_fft_bin; i < send_max_fft_bin; i++)
-                    {
-                        data_file.write((byte*)&spectrum[i], 4);
-                    }
-                }
+                data_file.write((byte*)&time_millis, 4);
+
+                for(int i = audioResults.minBinIndex; i < audioResults.maxBinIndex; i++)
+                    if(config.write_8bit)
+                        data_file.write((uint8_t)-audioResults.spectrum[i]);
+                    else
+                        data_file.write((byte*)&audioResults.spectrum[i], 4);
+
                 data_file.flush();
             }
-            if(write_csv_table)
+            if(config.write_csv_table)
             {
                 csv_file.print(time_millis);
                 csv_file.print(", ");
@@ -168,25 +161,22 @@ void loop()
         }
 
         // send data via Serial
-        if(Serial && send_output)
+        if(Serial && sendOutput)
         {
-            Serial.write((byte*)&mic_gain, 1);
-
+            Serial.write((byte*)&config.audio.mic_gain, 1);
             Serial.write((byte*)&max_freq_Index, 2);
 
             // highest peak-to-peak distance of the signal (if >= 1 clipping occurs)
             float peak = peak1.read();
             Serial.write((byte*)&peak, 4);
 
-            Serial.write((byte*)&(send_num_fft_bins), 2);
+            Serial.write((byte*)&(numberOfFftBins), 2);
 
             // send spectrum
-            for(i = send_min_fft_bin; i < send_max_fft_bin; i++)
+            for(i = minBinIndex; i < maxBinIndex; i++)
             {
                 Serial.write((byte*)&audioResults.noise_floor_distance[i], 4);
             }
-
-            send_output = false;
         }
     }
 }
