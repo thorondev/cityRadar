@@ -1,7 +1,6 @@
 #include "AudioSystem.h"
 #include "Config.h"
 #include "functions.h"
-#include "noise_floor.h"
 
 #include <SD.h>
 #include <SPI.h>
@@ -148,11 +147,11 @@ void loop()
                 csv_file.print(", ");
                 csv_file.print(audioResults.mean_amplitude_reverse);
                 csv_file.print(", ");
-                csv_file.print(bins_with_signal);
+                csv_file.print(audioResults.bins_with_signal);
                 csv_file.print(", ");
-                csv_file.print(bins_with_signal_reverse);
+                csv_file.print(audioResults.bins_with_signal_reverse);
                 csv_file.print(", ");
-                csv_file.println(pedestrian_amplitude);
+                csv_file.println(audioResults.pedestrian_amplitude);
                 csv_file.flush();
             }
 
@@ -164,19 +163,17 @@ void loop()
         if(Serial && sendOutput)
         {
             Serial.write((byte*)&config.audio.mic_gain, 1);
-            Serial.write((byte*)&max_freq_Index, 2);
+            Serial.write((byte*)&audioResults.max_freq_Index, 2);
 
             // highest peak-to-peak distance of the signal (if >= 1 clipping occurs)
-            float peak = peak1.read();
+            float peak = audio.getPeak();
             Serial.write((byte*)&peak, 4);
 
-            Serial.write((byte*)&(numberOfFftBins), 2);
+            auto const binCount = audio.getNumberOfFftBins();
+            Serial.write((byte*)&binCount, 2);
 
-            // send spectrum
-            for(i = minBinIndex; i < maxBinIndex; i++)
-            {
+            for(size_t i = audioResults.minBinIndex; i < audioResults.maxBinIndex; i++)
                 Serial.write((byte*)&audioResults.noise_floor_distance[i], 4);
-            }
         }
     }
 }

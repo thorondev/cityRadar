@@ -17,12 +17,15 @@ class AudioSystem
         const uint8_t linein_level = 15;                // only relevant if AUDIO_INPUT_LINEIN is used
         const bool iq_measurement = true;               // measure in both directions?
 
+        const float noise_floor_distance_threshold = 8; // dB; distance of "proper signal" to noise floor
         float mic_gain = 1.0; // only relevant if AUDIO_INPUT_MIC is used
 
         // IQ calibration
         bool hasChanges = false;
         float alpha = 1.10;
         float psi = -0.04;
+
+        Config& operator=(Config const& other);
     };
 
     struct Results
@@ -36,9 +39,10 @@ class AudioSystem
         float max_amplitude;         // highest signal in spectrum
         float max_amplitude_reverse; // highest signal in spectrum reverse direction
 
-        uint16_t max_freq_Index; // index of highest signal in spectrum
-        uint16_t max_pedestrian_bin; // convert max_pedestrian_speed to bin
+        uint16_t max_freq_Index;         // index of highest signal in spectrum
+        uint16_t max_freq_Index_reverse; // index of highest signal in spectrum reverse direction
 
+        uint16_t max_pedestrian_bin;
         float pedestrian_amplitude;  // used to detect the presence of a pedestrians
         float detected_speed;         // speed in m/s based on peak frequency
         float detected_speed_reverse; // speed in m/s based on peak frequency reverse direction
@@ -52,7 +56,7 @@ class AudioSystem
         uint16_t maxBinIndex;
         uint16_t minBinIndex;
 
-        void process(float* data, uint16_t iq_offset);
+        void process(float* data, uint16_t iq_offset, float noiseFloorDistanceThreshold, float speedConversion);
     };
 
   public:
@@ -61,16 +65,20 @@ class AudioSystem
     void setup(Config const& config, float maxPedestrianSpeed, float sendMaxSpeed);
     void processData(Results& results);
 
-    bool hasData() const;
+    bool hasData();
     void updateIQ(Config const& config);
 
     uint16_t getNumberOfFftBins() const { return numberOfFftBins; }
+    float getPeak() { return peak1.read(); }
 
   private:
+    Config config;
+
     uint16_t iq_offset; // offset used for IQ calculation
     uint16_t numberOfFftBins; // is calculated from send_max_speed
     uint16_t maxBinIndex;
     uint16_t minBinIndex;
+    uint16_t max_pedestrian_bin;
 
     AudioAnalyzeFFT1024_IQ_F32 fft_IQ1024;
     AudioAnalyzePeak_F32 peak1;
@@ -91,7 +99,7 @@ class AudioSystem
     AudioConnection_F32 patchCord6;
     AudioConnection_F32 patchCord7;
 
-    float speed_conversion;      // conversion from Hz to m/s
+    float speedConversion; // conversion from Hz to m/s
 };
 
 #endif

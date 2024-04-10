@@ -9,7 +9,6 @@ struct Config
 
     const float max_pedestrian_speed = 10.0;        // m/s; speed under which signals are detected as pedestrians
     const float send_max_speed = 500;               // don't send (and store) spectral data higher than this speed
-    const float noise_floor_distance_threshold = 8; // dB; distance of "proper signal" to noise floor
     const float TRIGGER_AMPLITUDE = 100;            // trigger threshold for mean amplitude to signify a car passing by
     const long COOL_DOWN_PERIOD = 1000;             // cool down period for trigger signal in milliseconds
 
