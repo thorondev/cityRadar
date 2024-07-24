@@ -36,8 +36,8 @@ class AudioSystem
         float spectrum[1024];                // spectral data
         float spectrum_smoothed[1024] = {0}; // smoothed spectral data for noise floor
 
-        float max_amplitude;         // highest signal in spectrum
-        float max_amplitude_reverse; // highest signal in spectrum reverse direction
+        float amplitudeMax;        // highest signal in spectrum
+        float amplitudeMaxReverse; // highest signal in spectrum reverse direction
 
         uint16_t max_freq_Index;         // index of highest signal in spectrum
         uint16_t max_freq_Index_reverse; // index of highest signal in spectrum reverse direction

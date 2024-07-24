@@ -77,10 +77,10 @@ void AudioSystem::Results::process(float* pointer, uint16_t iq_offset, float noi
         spectrum_smoothed[i] = ((smooth_n - 1) * spectrum_smoothed[i] + spectrum[i]) / smooth_n;
 
     // TODO FIX ME - this was active
-    // global_noiseFloor = spectrum_smoothed; WHAT? noise_floor is const!
+    // global_noiseFloor = spectrum_smoothed; // WHAT? noise_floor is const!
 
     // detect highest frequency
-    max_amplitude = -200.0;
+    amplitudeMax = -200.0;
     max_freq_Index = 0;
     max_freq_Index_reverse = 0;
     mean_amplitude = 0.0;
@@ -115,14 +115,14 @@ void AudioSystem::Results::process(float* pointer, uint16_t iq_offset, float noi
         }
         // with noise_floor_distance[i] > noise_floor_distance[1024-i] make shure that the signal is in the right
         // direction
-        if(noise_floor_distance[i] > noise_floor_distance[1024 - i] && noise_floor_distance[i] > max_amplitude)
+        if(noise_floor_distance[i] > noise_floor_distance[1024 - i] && noise_floor_distance[i] > amplitudeMax)
         {
-            max_amplitude = noise_floor_distance[i]; // remember highest amplitude
+            amplitudeMax = noise_floor_distance[i]; // remember highest amplitude
             max_freq_Index = i;                      // remember frequency index
         }
-        if(noise_floor_distance[1024 - i] > noise_floor_distance[i] && noise_floor_distance[1024 - i] > max_amplitude)
+        if(noise_floor_distance[1024 - i] > noise_floor_distance[i] && noise_floor_distance[1024 - i] > amplitudeMax)
         {
-            max_amplitude_reverse = noise_floor_distance[1024 - i]; // remember highest amplitude
+            amplitudeMaxReverse = noise_floor_distance[1024 - i]; // remember highest amplitude
             max_freq_Index_reverse = i;                             // remember frequency index
         }
     }

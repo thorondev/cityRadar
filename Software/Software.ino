@@ -139,9 +139,9 @@ void loop()
                 csv_file.print(", ");
                 csv_file.print(audioResults.detected_speed_reverse);
                 csv_file.print(", ");
-                csv_file.print(audioResults.max_amplitude);
+                csv_file.print(audioResults.amplitudeMax);
                 csv_file.print(", ");
-                csv_file.print(audioResults.max_amplitude_reverse);
+                csv_file.print(audioResults.amplitudeMaxReverse);
                 csv_file.print(", ");
                 csv_file.print(audioResults.mean_amplitude);
                 csv_file.print(", ");
