@@ -1,11 +1,11 @@
 # Attention for editors: You have to use tab-characters for command indentation!
 # vim: set noexpandtab:
 
-DEVICE_IP       ?= 192.168.1.121
-DEVICE_TTY      ?= /dev/ttyHotWireEsp32
+DEVICE_TTY      ?= /dev/ttyACM1
 
 BAUDRATE        := 115200
-BOARD           := teensy:avr:teensy40:usb=serial2
+PROCESSOR       := teensy40
+BOARD           := teensy:avr:$(PROCESSOR):usb=serial2
 
 BUILD_DIR_ARD   := build/
 
@@ -16,26 +16,28 @@ default: build
 help:
 	@echo "Help:"
 	@echo ""
-	@echo "$(MAKE) build        - just build"
-	@echo "$(MAKE) deployToIp   - build and upload to $(DEVICE_IP)"
-	@echo "$(MAKE) deployToTty  - build and upload to $(DEVICE_TTY)"
-	@echo "$(MAKE) monitor      - monitor $(DEVICE_TTY)"
+	@echo "$(MAKE) build         - just build"
+	@echo "$(MAKE) deploy        - build and upload to teensy"
+	@echo "$(MAKE) deployNoBuild - just upload to teensy"
+	@echo "$(MAKE) monitor       - monitor $(DEVICE_TTY)"
 
 .PHONY: build
 build:
-	arduino-cli compile --build-path $(BUILD_DIR_ARD) --build-cache-path /tmp/arduino --fqbn $(BOARD) -v .
+	arduino-cli compile --jobs 8 --build-path $(BUILD_DIR_ARD) --build-cache-path /tmp/arduino --fqbn $(BOARD) -v .
 
-.PHONY: deployToIp
-deployToIp: build
-	arduino-cli upload -p $(DEVICE_IP) --fqbn $(BOARD) --input-dir $(BUILD_DIR_ARD) .
-
-.PHONY: deployToTty
-deployToTty: build
-	arduino-cli upload -p $(DEVICE_TTY) --fqbn $(BOARD) --input-dir $(BUILD_DIR_ARD) .
+.PHONY: deploy
+deploy: build
+	teensy_loader_cli -v --mcu=teensy40 -w build/Software.ino.hex
+.PHONY: deployNoBuild
+deployNoBuild:
+	teensy_loader_cli -v --mcu=teensy40 -w build/Software.ino.hex
+#arduino-cli upload -p $(DEVICE_TTY) --fqbn $(BOARD) --input-dir $(BUILD_DIR_ARD) .
 
 .PHONY: monitor
 monitor:
-	arduino-cli monitor help -p $(DEVICE_TTY) -c "baudrate=$(BAUDRATE)"
+# get info via arduino-cli board list
+	arduino-cli monitor --fqbn teensy:avr:teensy40 --port usb3/3-4/3-4.3/3-4.3.3 --protocol teensy
+#arduino-cli monitor -p $(DEVICE_TTY) -c "baudrate=$(BAUDRATE)"
 
 .PHONY: testSetup
 testSetup:
