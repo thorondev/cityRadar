@@ -6,6 +6,7 @@ DEVICE_TTY      ?= /dev/ttyACM1
 BAUDRATE        := 115200
 PROCESSOR       := teensy40
 BOARD           := teensy:avr:$(PROCESSOR):usb=serial2
+HEXFILE         ?= build/Software.ino.hex
 
 BUILD_DIR_ARD   := build/
 
@@ -27,17 +28,15 @@ build:
 
 .PHONY: deploy
 deploy: build
-	teensy_loader_cli -v --mcu=teensy40 -w build/Software.ino.hex
+	teensy_loader_cli -v --mcu=teensy40 -w $(HEXFILE)
 .PHONY: deployNoBuild
 deployNoBuild:
-	teensy_loader_cli -v --mcu=teensy40 -w build/Software.ino.hex
-#arduino-cli upload -p $(DEVICE_TTY) --fqbn $(BOARD) --input-dir $(BUILD_DIR_ARD) .
+	teensy_loader_cli -v --mcu=teensy40 -w $(HEXFILE)
 
+# get info via arduino-cli board list
 .PHONY: monitor
 monitor:
-# get info via arduino-cli board list
-	arduino-cli monitor --fqbn teensy:avr:teensy40 --port usb3/3-4/3-4.3/3-4.3.3 --protocol teensy
-#arduino-cli monitor -p $(DEVICE_TTY) -c "baudrate=$(BAUDRATE)"
+	arduino-cli monitor --fqbn teensy:avr:teensy40 --port usb3/3-4/3-4.2 --protocol teensy
 
 .PHONY: testSetup
 testSetup:

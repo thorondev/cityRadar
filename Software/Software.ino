@@ -100,7 +100,13 @@ void setup()
 
 void loop()
 {
-    bool sendOutput = false; // send output over serial? (ONCE)
+    if(not audio.hasData()) {
+        delay(1);
+        return;
+    }
+
+    bool sendOutput = false; // send output over serial - attention: this is only send once and needs to be preserved
+    // and thus might be better put into global state or something
 
     processInputs(config.audio, sendOutput);
     if(config.audio.hasChanges)
@@ -109,71 +115,84 @@ void loop()
         config.audio.hasChanges = false;
     }
 
-    // generate output
-    if(audio.hasData())
+    audio.processData(audioResults);
+
+    // save data on sd card
+    if(config.write_sd)
     {
-        audio.processData(audioResults);
-
-        // save data on sd card
-        if(config.write_sd)
+        // elapsed time since start of sensor in milliseconds
+        unsigned long time_millis = millis();
+        if(config.write_raw_data)
         {
-            // elapsed time since start of sensor in milliseconds
-            unsigned long time_millis = millis();
-            if(config.write_raw_data)
-            {
-                data_file.write((byte*)&time_millis, 4);
+            data_file.write((byte*)&time_millis, 4);
 
-                for(int i = audioResults.minBinIndex; i < audioResults.maxBinIndex; i++)
-                    if(config.write_8bit)
-                        data_file.write((uint8_t)-audioResults.spectrum[i]);
-                    else
-                        data_file.write((byte*)&audioResults.spectrum[i], 4);
+            for(int i = audioResults.minBinIndex; i < audioResults.maxBinIndex; i++)
+                if(config.write_8bit)
+                    data_file.write((uint8_t)-audioResults.spectrum[i]);
+                else
+                    data_file.write((byte*)&audioResults.spectrum[i], 4);
 
-                data_file.flush();
-            }
-            if(config.write_csv_table)
-            {
-                csv_file.print(time_millis);
-                csv_file.print(", ");
-                csv_file.print(audioResults.detected_speed);
-                csv_file.print(", ");
-                csv_file.print(audioResults.detected_speed_reverse);
-                csv_file.print(", ");
-                csv_file.print(audioResults.amplitudeMax);
-                csv_file.print(", ");
-                csv_file.print(audioResults.amplitudeMaxReverse);
-                csv_file.print(", ");
-                csv_file.print(audioResults.mean_amplitude);
-                csv_file.print(", ");
-                csv_file.print(audioResults.mean_amplitude_reverse);
-                csv_file.print(", ");
-                csv_file.print(audioResults.bins_with_signal);
-                csv_file.print(", ");
-                csv_file.print(audioResults.bins_with_signal_reverse);
-                csv_file.print(", ");
-                csv_file.println(audioResults.pedestrian_amplitude);
-                csv_file.flush();
-            }
-
-            // SerialUSB1.print("csv sd write time: ");
-            // SerialUSB1.println(millis()-time_millis);
+            data_file.flush();
+        }
+        if(config.write_csv_table)
+        {
+            csv_file.print(time_millis);
+            csv_file.print(", ");
+            csv_file.print(audioResults.detected_speed);
+            csv_file.print(", ");
+            csv_file.print(audioResults.detected_speed_reverse);
+            csv_file.print(", ");
+            csv_file.print(audioResults.amplitudeMax);
+            csv_file.print(", ");
+            csv_file.print(audioResults.amplitudeMaxReverse);
+            csv_file.print(", ");
+            csv_file.print(audioResults.mean_amplitude);
+            csv_file.print(", ");
+            csv_file.print(audioResults.mean_amplitude_reverse);
+            csv_file.print(", ");
+            csv_file.print(audioResults.bins_with_signal);
+            csv_file.print(", ");
+            csv_file.print(audioResults.bins_with_signal_reverse);
+            csv_file.print(", ");
+            csv_file.println(audioResults.pedestrian_amplitude);
+            csv_file.flush();
         }
 
-        // send data via Serial
-        if(Serial && sendOutput)
+        // SerialUSB1.print("csv sd write time: ");
+        // SerialUSB1.println(millis()-time_millis);
+    }
+
+    // send data via Serial
+    if(sendOutput)
+    {
+        if(bool readable = false; readable)
         {
-            Serial.write((byte*)&config.audio.mic_gain, 1);
+            Serial.println("data:");
+            Serial.println(config.audio.mic_gain);
+            Serial.println(audioResults.max_freq_Index);
+            Serial.println(audio.getPeak());
+            Serial.println(audio.getNumberOfFftBins());
+            Serial.println(audioResults.minBinIndex);
+            Serial.println(audioResults.maxBinIndex);
+        }
+        else
+        {
+            auto const micGain = static_cast<int8_t>(config.audio.mic_gain);
+            Serial.write((byte*)&micGain, 1);
             Serial.write((byte*)&audioResults.max_freq_Index, 2);
 
             // highest peak-to-peak distance of the signal (if >= 1 clipping occurs)
-            float peak = audio.getPeak();
+            float const peak = audio.getPeak();
             Serial.write((byte*)&peak, 4);
 
-            auto const binCount = audio.getNumberOfFftBins();
+            uint16_t const binCount = audio.getNumberOfFftBins();
             Serial.write((byte*)&binCount, 2);
 
             for(size_t i = audioResults.minBinIndex; i < audioResults.maxBinIndex; i++)
-                Serial.write((byte*)&audioResults.noise_floor_distance[i], 4);
+                Serial.write((byte*)&(audioResults.noise_floor_distance[i]), 4);
+
+            sendOutput = false;
         }
     }
+
 }

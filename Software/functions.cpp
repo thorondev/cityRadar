@@ -26,11 +26,10 @@ void setI2SFreq(int freq) {
 
 void printDigits(int digits){
   // utility function for digital clock display: prints preceding colon and leading 0
-  // TODO changed from SerialUSB1
-  SerialUSB.print(":");
+  Serial.print(":");
   if(digits < 10)
-    SerialUSB.print('0');
-  SerialUSB.print(digits);
+    Serial.print('0');
+  Serial.print(digits);
 }
 
 time_t getTeensy3Time()
@@ -41,18 +40,18 @@ time_t getTeensy3Time()
 void processInputs(AudioSystem::Config& config, bool& sendOutput)
 {
   // control input from serial
-  if (Serial.available() > 0) {
-    int input = Serial.read();
+  while(Serial.available())
+  {
+    int8_t input = Serial.read();
+
+    if(input==100) // 'd' for data
+        sendOutput=true;
 
     if((input==0) & (config.mic_gain > 0.001)){ // - key
         config.mic_gain -= 0.01;
     }
     if((input==1) & (config.mic_gain<10)){ // + key
         config.mic_gain += 0.01;
-    }
-
-    if(input==100){ // d for data
-        sendOutput=true;
     }
 
     if(input==111){ //o
@@ -69,10 +68,10 @@ void processInputs(AudioSystem::Config& config, bool& sendOutput)
     }
 
     if(input==111 || input==108 || input==105 || input==107){
-        SerialUSB1.print("alpha = ");
-        SerialUSB1.println(config.alpha);
-        SerialUSB1.print("psi = ");
-        SerialUSB1.println(config.psi);
+        Serial.print("alpha = ");
+        Serial.println(config.alpha);
+        Serial.print("psi = ");
+        Serial.println(config.psi);
 
         config.hasChanges = true;
     }
@@ -89,17 +88,17 @@ void processInputs(AudioSystem::Config& config, bool& sendOutput)
             Teensy3Clock.set(externalTime); // set Teensy RTC
         }
 
-        SerialUSB1.print("Time set to: ");
-        SerialUSB1.print(year());
-        SerialUSB1.print("-");
-        SerialUSB1.print(month());
-        SerialUSB1.print("-");
-        SerialUSB1.print(day());
-        SerialUSB1.print(" ");
-        SerialUSB1.print(hour());
+        Serial.print("Time set to: ");
+        Serial.print(year());
+        Serial.print("-");
+        Serial.print(month());
+        Serial.print("-");
+        Serial.print(day());
+        Serial.print(" ");
+        Serial.print(hour());
         printDigits(minute());
         printDigits(second());
-        SerialUSB1.println();
+        Serial.println();
     }
   }
 }

@@ -19,8 +19,7 @@ void AudioSystem::setup(AudioSystem::Config const& config, float maxPedestrianSp
 {
     this->config = config;
 
-    // Audio connections require memory to work.  For more
-    // detailed information, see the MemoryAndCpuUsage example
+    // Audio connections require memory to work. For more detailed information, see the MemoryAndCpuUsage example
     AudioMemory_F32(400);
 
     sgtl5000_1.enable();
@@ -45,7 +44,7 @@ void AudioSystem::setup(AudioSystem::Config const& config, float maxPedestrianSp
     {
         iq_offset = config.fftWidth/2;     // new middle point
         numberOfFftBins = rawBinCount * 2; // send both sides; not only one
-        maxBinIndex += iq_offset;
+        maxBinIndex = numberOfFftBins;
         minBinIndex = (config.fftWidth - maxBinIndex);
     }
     else
@@ -80,7 +79,7 @@ void AudioSystem::Results::process(float* pointer, uint16_t iq_offset, float noi
     // global_noiseFloor = spectrum_smoothed; // WHAT? noise_floor is const!
 
     // detect highest frequency
-    amplitudeMax = -200.0;
+    amplitudeMax = -9999.0;
     max_freq_Index = 0;
     max_freq_Index_reverse = 0;
     mean_amplitude = 0.0;
@@ -105,25 +104,23 @@ void AudioSystem::Results::process(float* pointer, uint16_t iq_offset, float noi
     {
         mean_amplitude = mean_amplitude + noise_floor_distance[i];
         if(noise_floor_distance[i] > noiseFloorDistanceThreshold)
-        {
             bins_with_signal++;
-        }
+
         mean_amplitude_reverse = mean_amplitude_reverse + noise_floor_distance[1024 - i];
         if(noise_floor_distance[1024 - i] > noiseFloorDistanceThreshold)
-        {
             bins_with_signal_reverse++;
-        }
+
         // with noise_floor_distance[i] > noise_floor_distance[1024-i] make shure that the signal is in the right
         // direction
         if(noise_floor_distance[i] > noise_floor_distance[1024 - i] && noise_floor_distance[i] > amplitudeMax)
         {
             amplitudeMax = noise_floor_distance[i]; // remember highest amplitude
-            max_freq_Index = i;                      // remember frequency index
+            max_freq_Index = i;                     // remember frequency index
         }
         if(noise_floor_distance[1024 - i] > noise_floor_distance[i] && noise_floor_distance[1024 - i] > amplitudeMax)
         {
             amplitudeMaxReverse = noise_floor_distance[1024 - i]; // remember highest amplitude
-            max_freq_Index_reverse = i;                             // remember frequency index
+            max_freq_Index_reverse = i;                           // remember frequency index
         }
     }
     detected_speed = (max_freq_Index - iq_offset) * speedConversion;
